@@ -1,0 +1,47 @@
+global class InventoryBatchJob implements Database.Batchable<SObject>, System.Schedulable {
+
+    global Database.QueryLocator start(Database.BatchableContext BC) {
+        return Database.getQueryLocator(
+            'SELECT Id, Stock_Quantity_c__c ' +
+            'FROM HandsMen_Product__c ' +
+            'WHERE Stock_Quantity_c__c < 10'
+        );
+    }
+
+    global void execute(
+        Database.BatchableContext BC,
+        List<SObject> records
+    ) {
+        List<HandsMen_Product__c> productsToUpdate =
+            new List<HandsMen_Product__c>();
+
+        for (SObject record : records) {
+
+            HandsMen_Product__c product =
+                (HandsMen_Product__c) record;
+
+            if (product.Stock_Quantity_c__c != null) {
+                product.Stock_Quantity_c__c += 50;
+            } else {
+                product.Stock_Quantity_c__c = 50;
+            }
+
+            productsToUpdate.add(product);
+        }
+
+        if (!productsToUpdate.isEmpty()) {
+            update productsToUpdate;
+        }
+    }
+
+    global void finish(Database.BatchableContext BC) {
+        System.debug('Inventory Sync Completed');
+    }
+
+    global void execute(System.SchedulableContext SC) {
+        Database.executeBatch(
+            new InventoryBatchJob(),
+            200
+        );
+    }
+}
